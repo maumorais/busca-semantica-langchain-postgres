@@ -1,0 +1,19 @@
+# Environment variables
+.env
+
+# Virtual environment
+venv/
+.venv/
+env/
+.env.*
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Build artifacts
+build/
+dist/
+*.egg-info/

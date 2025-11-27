@@ -10,8 +10,8 @@ from src.search import DocumentSearcher, check_env_vars
 def get_chat_model(provider: str):
     """Retorna a instância do modelo de chat com base no provedor."""
     if provider == 'google':
-        print("Usando o modelo de chat do Google (gemini-1.5-flash).")
-        return ChatGoogleGenerativeAI(model="gemini-1.5-flash", temperature=0)
+        print("Usando o modelo de chat do Google (gemini-2.5-flash).")
+        return ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0)
     elif provider == 'openai':
         print("Usando o modelo de chat da OpenAI (gpt-3.5-turbo).")
         return ChatOpenAI(temperature=0) # Modelo padrão é gpt-3.5-turbo
