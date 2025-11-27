@@ -25,27 +25,39 @@ def check_env_vars(provider: str):
     elif provider == 'openai' and not os.getenv("OPENAI_API_KEY"):
         raise EnvironmentError("Para o provedor 'openai', a OPENAI_API_KEY é necessária.")
 
-def get_embeddings_model(provider: str):
+def get_embeddings_model(provider: str, verbose: bool = False):
     """Retorna a instância do modelo de embeddings com base no provedor."""
+    verbose_print = v_print(verbose)
     if provider == 'google':
+        verbose_print("Usando o modelo de embeddings do Google (models/embedding-001).")
         return GoogleGenerativeAIEmbeddings(model="models/embedding-001")
     elif provider == 'openai':
+        verbose_print("Usando o modelo de embeddings da OpenAI (text-embedding-ada-002).")
         return OpenAIEmbeddings()
     else:
         raise ValueError("Provedor inválido. Escolha 'google' ou 'openai'.")
+
+def v_print(verbose: bool):
+    """Retorna uma função de print que só imprime se verbose for True."""
+    def print_if_verbose(*args, **kwargs):
+        if verbose:
+            print(*args, **kwargs)
+    return print_if_verbose
+
 
 class DocumentSearcher:
     """
     Uma classe para encapsular a lógica de busca de documentos em um vector store.
     """
-    def __init__(self, provider: str, collection_name: str = "documentos_pdf"):
+    def __init__(self, provider: str, collection_name: str = "documentos_pdf", verbose: bool = False):
         """
         Inicializa o buscador, configurando embeddings e a conexão com o banco.
         """
-        print(f"Inicializando o buscador de documentos com o provedor: {provider}...")
+        self.verbose_print = v_print(verbose)
+        self.verbose_print(f"Inicializando o buscador de documentos com o provedor: {provider}...")
         check_env_vars(provider)
         
-        self.embeddings = get_embeddings_model(provider)
+        self.embeddings = get_embeddings_model(provider, verbose)
         self.connection_string = get_connection_string()
         self.collection_name = collection_name
 
@@ -55,7 +67,7 @@ class DocumentSearcher:
                 collection_name=self.collection_name,
                 connection=self.connection_string,
             )
-            print("Conexão com o banco de dados vetorial estabelecida com sucesso.")
+            self.verbose_print("Conexão com o banco de dados vetorial estabelecida com sucesso.")
         except Exception as e:
             raise ConnectionError(f"Não foi possível conectar ao banco de dados: {e}") from e
 
@@ -63,21 +75,43 @@ class DocumentSearcher:
         """
         Realiza uma busca por similaridade no banco de vetores.
         """
-        print(f"Buscando por: '{query}'...")
+        self.verbose_print(f"Buscando por: '{query}'...")
         similar_docs = self.db.similarity_search_with_score(query, k=k)
-        print(f"Encontrados {len(similar_docs)} documentos similares.")
+        self.verbose_print(f"Encontrados {len(similar_docs)} documentos similares.")
         return similar_docs
 
 # Carrega as variáveis de ambiente do arquivo .env no escopo global
 load_dotenv()
 
 if __name__ == '__main__':
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Busca documentos em um banco de dados vetorial.")
+    parser.add_argument(
+        "--provider",
+        type=str,
+        default="google",
+        choices=['google', 'openai'],
+        help="O provedor de LLM a ser usado: 'google' ou 'openai' (padrão: google)."
+    )
+    parser.add_argument(
+        "--query", 
+        type=str, 
+        default="qualquer coisa", 
+        help="A query para a busca (padrão: 'qualquer coisa')."
+    )
+    parser.add_argument(
+        "-v", "--verbose",
+        action="store_true",
+        help="Aumenta a verbosidade para exibir logs detalhados."
+    )
+    args = parser.parse_args()
+
     # Este teste assume que o 'ingest' foi executado com o provedor 'google'
-    print("--- Teste da classe de busca (provedor: google) ---")
+    print(f"--- Teste da classe de busca (provedor: {args.provider}) ---")
     try:
-        searcher = DocumentSearcher(provider='google')
-        test_query = "qualquer coisa"
-        results = searcher.search_documents(test_query)
+        searcher = DocumentSearcher(provider=args.provider, verbose=args.verbose)
+        results = searcher.search_documents(args.query)
         
         if results:
             for doc, score in results:

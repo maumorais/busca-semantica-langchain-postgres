@@ -28,16 +28,25 @@ def check_env_vars(provider: str):
     elif provider == 'openai' and not os.getenv("OPENAI_API_KEY"):
         raise EnvironmentError("Para o provedor 'openai', a OPENAI_API_KEY é necessária.")
 
-def get_embeddings_model(provider: str):
+def get_embeddings_model(provider: str, verbose: bool = False):
     """Retorna a instância do modelo de embeddings com base no provedor."""
+    verbose_print = v_print(verbose)
+    
     if provider == 'google':
-        print("Usando o modelo de embeddings do Google (models/embedding-001).")
+        verbose_print("Usando o modelo de embeddings do Google (models/embedding-001).")
         return GoogleGenerativeAIEmbeddings(model="models/embedding-001")
     elif provider == 'openai':
-        print("Usando o modelo de embeddings da OpenAI (text-embedding-ada-002).")
+        verbose_print("Usando o modelo de embeddings da OpenAI (text-embedding-ada-002).")
         return OpenAIEmbeddings() # Modelo padrão é 'text-embedding-ada-002'
     else:
         raise ValueError("Provedor inválido. Escolha 'google' ou 'openai'.")
+
+def v_print(verbose: bool):
+    """Retorna uma função de print que só imprime se verbose for True."""
+    def print_if_verbose(*args, **kwargs):
+        if verbose:
+            print(*args, **kwargs)
+    return print_if_verbose
 
 def main():
     """
@@ -65,7 +74,13 @@ def main():
         default="documentos_pdf", 
         help="O nome da coleção no banco de dados vetorial (padrão: documentos_pdf)."
     )
+    parser.add_argument(
+        "-v", "--verbose",
+        action="store_true",
+        help="Aumenta a verbosidade para exibir logs detalhados."
+    )
     args = parser.parse_args()
+    verbose_print = v_print(args.verbose)
 
     try:
         check_env_vars(args.provider)
@@ -73,11 +88,11 @@ def main():
         print(f"Erro de configuração: {e}")
         return
 
-    print(f"Lendo o arquivo: {args.path}...")
+    verbose_print(f"Lendo o arquivo: {args.path}...")
     try:
         loader = PyPDFLoader(args.path)
         docs = loader.load()
-        print(f"Documento carregado com {len(docs)} página(s).")
+        verbose_print(f"Documento carregado com {len(docs)} página(s).")
     except FileNotFoundError:
         print(f"Erro: O arquivo '{args.path}' não foi encontrado.")
         return
@@ -85,13 +100,13 @@ def main():
         print(f"Ocorreu um erro ao ler o PDF: {e}")
         return
 
-    print("Dividindo o documento em chunks...")
+    verbose_print("Dividindo o documento em chunks...")
     text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=150)
     split_docs = text_splitter.split_documents(docs)
-    print(f"Documento dividido em {len(split_docs)} chunks.")
+    verbose_print(f"Documento dividido em {len(split_docs)} chunks.")
 
     try:
-        embeddings = get_embeddings_model(args.provider)
+        embeddings = get_embeddings_model(args.provider, args.verbose)
     except ValueError as e:
         print(f"Erro: {e}")
         return
@@ -99,7 +114,7 @@ def main():
     connection_string = get_connection_string()
     collection_name = args.collection
 
-    print(f"Salvando embeddings na coleção '{collection_name}' (Provedor: {args.provider})...")
+    verbose_print(f"Salvando embeddings na coleção '{collection_name}' (Provedor: {args.provider})...")
     PGVector.from_documents(
         embedding=embeddings,
         documents=split_docs,
