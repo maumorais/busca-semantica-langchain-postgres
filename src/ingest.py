@@ -8,6 +8,7 @@ from langchain_openai import OpenAIEmbeddings
 from langchain_postgres import PGVector
 
 def get_connection_string() -> str:
+    # comment to force git to recognize the changes
     """Constrói a string de conexão a partir das variáveis de ambiente."""
     user = os.getenv("POSTGRES_USER")
     password = os.getenv("POSTGRES_PASSWORD")
