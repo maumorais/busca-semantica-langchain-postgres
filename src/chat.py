@@ -5,26 +5,22 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_openai import ChatOpenAI
-from src.search import DocumentSearcher, check_env_vars
+from src.utils import check_env_vars, v_print
+from src.search import DocumentSearcher
 
 def get_chat_model(provider: str, verbose: bool = False):
     """Retorna a instância do modelo de chat com base no provedor."""
     verbose_print = v_print(verbose)
     if provider == 'google':
-        verbose_print("Usando o modelo de chat do Google (gemini-2.5-flash).")
-        return ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0)
+        verbose_print("Usando o modelo de chat do Google (gemini-2.5-flash-lite).")
+        return ChatGoogleGenerativeAI(model="gemini-2.5-flash-lite", temperature=0)
     elif provider == 'openai':
-        verbose_print("Usando o modelo de chat da OpenAI (gpt-3.5-turbo).")
-        return ChatOpenAI(temperature=0) # Modelo padrão é gpt-3.5-turbo
+        verbose_print("Usando o modelo de chat da OpenAI (gpt-5-nano).")
+        return ChatOpenAI(model="gpt-5-nano", temperature=0)
     else:
         raise ValueError("Provedor inválido. Escolha 'google' ou 'openai'.")
 
-def v_print(verbose: bool):
-    """Retorna uma função de print que só imprime se verbose for True."""
-    def print_if_verbose(*args, **kwargs):
-        if verbose:
-            print(*args, **kwargs)
-    return print_if_verbose
+
 
 def format_context(docs_with_scores, verbose_print):
     """Formata os documentos recuperados em uma string de contexto."""
@@ -81,6 +77,16 @@ REGRAS:
   "Não tenho informações necessárias para responder sua pergunta."
 - Nunca invente ou use conhecimento externo.
 - Nunca produza opiniões ou interpretações além do que está escrito.
+
+EXEMPLOS DE PERGUNTAS FORA DO CONTEXTO:
+Pergunta: "Qual é a capital da França?"
+Resposta: "Não tenho informações necessárias para responder sua pergunta."
+
+Pergunta: "Quantos clientes temos em 2024?"
+Resposta: "Não tenho informações necessárias para responder sua pergunta."
+
+Pergunta: "Você acha isso bom ou ruim?"
+Resposta: "Não tenho informações necessárias para responder sua pergunta."
 
 PERGUNTA DO USUÁRIO:
 {question}
